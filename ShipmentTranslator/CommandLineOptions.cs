@@ -9,6 +9,11 @@ namespace ShipmentTranslator
 {
 	public class CommandLineOptions
 	{
+		[Option('s',"StartOrderNumber",DefaultValue = "", Required = false, 
+			HelpText = "Starting Order Number in the shipment export file. Will discard all records before this number.")]
+		public string StartOrderNumber { get; set; }
+
+
 		[Option("UPSInputFilePath", Required = false,
 			HelpText = "UPS Input File Path overriding the default in the configuration.")]
 		public string UPSInputFilePath { get; set; }
@@ -17,10 +22,10 @@ namespace ShipmentTranslator
 			HelpText = "UPS Export File Path overriding the default in the configuration.")]
 		public string UPSExportFilePath { get; set; }
 
-		// omitting long name, default --verbose
-		[Option(DefaultValue = false, Required = false,
-		  HelpText = "Prints all informational messages to the screen.")]
-		public bool Verbose { get; set; }
+		
+		[Option('l',"LogLevel",DefaultValue = "Error", Required = false,
+		  HelpText = "Prints informational messages to the screen based on given Log Level.")]
+		public string LogLevel { get; set; }
 
 		[Option("EndiciaInputFilePath", Required = false,
 			HelpText = "Endicia Input File Path overriding the default in the configuration.")]

@@ -1,21 +1,82 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace ShipmentTranslator
 {
+	public enum LogLevel
+	{
+		Error,
+		Warn,
+		Info
+	}
+
+
     public class Utilities
     {
+		private LogLevel _logLevel = LogLevel.Error;
+	    public CommandLine.ParserResult<CommandLineOptions> _args;
+		
+		public void WriteLog(string message, LogLevel logLevel, string lineData = "", Exception exception = null)
+	    {
+		    if ((int) logLevel >= (int) _logLevel)
+		    {
+			    Console.WriteLine(message );
+
+		    }
 
 
+
+			if (logLevel == LogLevel.Error)
+		    {
+				var logfilepath = ConfigurationManager.AppSettings["ErrorLogFilePath"] + "ShipmentTranslator_" +
+		                      DateTime.Now.ToString("yyyMMdd") + ".txt";
+
+			    if (!File.Exists(logfilepath))
+			    {
+				    File.CreateText(logfilepath).Close();
+					
+			    }
+			    using (var log = File.AppendText(logfilepath))
+			    {
+				    log.Write(DateTime.Now.ToString("s") + "|" + message + "|" + (exception?.ToString() ?? "") +"|Data:" + lineData );
+					log.Flush();
+					log.Close();
+				}
+
+		    }
+	    }
+
+	    public Utilities(CommandLine.ParserResult<CommandLineOptions> args)
+	    {
+		    _args = args;
+
+		    switch (args.Value.LogLevel)
+		    {
+				case "Warn":
+					_logLevel = LogLevel.Warn;
+				    break;
+				case "Info":
+					_logLevel = LogLevel.Info;
+				    break;
+		    }
+	    }
     }
+
 	#region Config file section definitions
 	public class FileImportExportDefinition : ConfigurationSection
 	{
-
+		[ConfigurationProperty("DisplayName", IsRequired = true)]
+		public string DisplayName
+		{
+			get { return this["DisplayName"].ToString(); }
+			set { this["DisplayName"] = value; }
+		}
 		[ConfigurationProperty("ImportFileName",  IsRequired = true)]
 		public string ImportFileName
 		{
