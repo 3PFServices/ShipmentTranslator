@@ -11,9 +11,9 @@ namespace ShipmentTranslator
 {
 	public enum LogLevel
 	{
-		Error,
-		Warn,
-		Info
+		Error = 0,
+		Warn = 1,
+		Info = 2
 	}
 
 
@@ -22,9 +22,10 @@ namespace ShipmentTranslator
 		private LogLevel _logLevel = LogLevel.Error;
 	    public CommandLine.ParserResult<CommandLineOptions> _args;
 		
+
 		public void WriteLog(string message, LogLevel logLevel, string lineData = "", Exception exception = null)
 	    {
-		    if ((int) logLevel >= (int) _logLevel)
+		    if ((int) logLevel <= (int) _logLevel)
 		    {
 			    Console.WriteLine(message );
 
@@ -56,6 +57,7 @@ namespace ShipmentTranslator
 	    {
 		    _args = args;
 
+
 		    switch (args.Value.LogLevel)
 		    {
 				case "Warn":
@@ -63,6 +65,9 @@ namespace ShipmentTranslator
 				    break;
 				case "Info":
 					_logLevel = LogLevel.Info;
+				    break;
+				default:
+					_logLevel = LogLevel.Error;
 				    break;
 		    }
 	    }
@@ -137,6 +142,14 @@ namespace ShipmentTranslator
 				this["ArchiveFilePath"] = value;
 			}
 		}
+		[ConfigurationProperty("CheckForHeaderRecord", IsRequired = false, DefaultValue = false)]
+		public bool CheckForHeaderRecord
+		{
+			get { return (bool)this["CheckForHeaderRecord"]; }
+			set { this["CheckForHeaderRecord"] = value; }
+		}
+
+
 		[ConfigurationProperty("FreightMarkupPercent", IsRequired = false, DefaultValue = 0)]
 		public int FreightMarkupPercent
 		{

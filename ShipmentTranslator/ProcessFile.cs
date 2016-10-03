@@ -23,18 +23,18 @@ namespace ShipmentTranslator
 			{
 				_ups = (FileImportExportDefinition) ConfigurationManager.GetSection("UpsShipments");
 			}
-			catch (Exception)
+			catch (Exception err)
 			{
-				_utilities.WriteLog("No UPS Shipment configuration set.", LogLevel.Warn);
+				_utilities.WriteLog("UPS Shipment configuration Issue. " + err.Message, LogLevel.Error,null,err);
 			}
 			try
 			{
 				_endicia = (FileImportExportDefinition) ConfigurationManager.GetSection("EndiciaShipments");
 			}
-			catch (Exception)
+			catch (Exception err)
 			{
 
-				_utilities.WriteLog("No Endicia Shipment configuration set.", LogLevel.Warn);
+				_utilities.WriteLog("Endicia Shipment configuration issue." + err.Message, LogLevel.Error,null, err);
 			}
 
 		}
@@ -77,7 +77,7 @@ namespace ShipmentTranslator
 				_utilities.WriteLog("Creating Export Directory: " + fileImportExport.ExportFilePath, LogLevel.Info);
 			}
 
-			if (!Directory.Exists(fileImportExport.ArchiveFilePath))
+			if (!string.IsNullOrWhiteSpace(fileImportExport.ArchiveFilePath) && !Directory.Exists(fileImportExport.ArchiveFilePath))
 			{
 				Directory.CreateDirectory(fileImportExport.ArchiveFilePath);
 				_utilities.WriteLog("Creating Archive Directory: " + fileImportExport.ArchiveFilePath, LogLevel.Info);
@@ -122,6 +122,17 @@ namespace ShipmentTranslator
 				_utilities.WriteLog("Export filename has been updated to: "+ updatedExportFileName, LogLevel.Info);
 			}
 
+			string _enteredStartingOrderNumber = string.Empty;
+
+			Console.WriteLine("==========================================");
+			Console.WriteLine("Please enter the Starting Order number for the " + fileImportExport.DisplayName + " file.");
+			Console.WriteLine("Note: If you want to process the entire file, don't enter any number.");
+			Console.WriteLine("==========================================");
+			_enteredStartingOrderNumber = Console.ReadLine();
+
+			
+			
+
 			int lineCount = 1;
 			//read file from order number on
 			//discard any with blank order #s
@@ -140,14 +151,22 @@ namespace ShipmentTranslator
 
 						if (string.IsNullOrWhiteSpace(data[0])
 						    || (!foundOrder
-						        && !string.IsNullOrWhiteSpace(_utilities._args.Value.StartOrderNumber)
-						        && data[0].Replace("\"","") != _utilities._args.Value.StartOrderNumber))
+						        && !string.IsNullOrWhiteSpace(_enteredStartingOrderNumber)
+						        && data[0].Replace("\"","") != _enteredStartingOrderNumber))
 						{
 							lineCount++;
 							continue;
 						}
 
-						if (!string.IsNullOrWhiteSpace(_utilities._args.Value.StartOrderNumber) && data[0].Replace("\"","") == _utilities._args.Value.StartOrderNumber)
+						if (fileImportExport.CheckForHeaderRecord)
+						{
+							if (data[0].Contains("Order"))
+							{
+								lineCount++;
+								continue;
+							}
+						}
+						if (!string.IsNullOrWhiteSpace(_enteredStartingOrderNumber) && data[0].Replace("\"","") == _enteredStartingOrderNumber)
 						{
 							_utilities.WriteLog("Found starting order number. Proceeding to export remaining lines in file.", LogLevel.Info);
 							foundOrder = true;
@@ -170,7 +189,7 @@ namespace ShipmentTranslator
 								continue;
 
 							}
-							decimal markup = fileImportExport.FreightMarkupPercent;
+							decimal markup = Convert.ToDecimal(fileImportExport.FreightMarkupPercent);
 
 							//exportLine.Append("\"");
 							if (exportDefinition[key].Contains("PlusMarkup"))
@@ -223,22 +242,27 @@ namespace ShipmentTranslator
 				import.Close();
 			}
 
-
-			FileInfo f = new FileInfo(fileImportExport.ImportFilePath + fileImportExport.ImportFileName);
-
-			string archiveFileName = f.Name.Replace(f.Extension,"") + DateTime.Now.ToString("_yyyyMMdd_HHmmss") + f.Extension;
-			_utilities.WriteLog("Archiving Import file to "+ fileImportExport.ArchiveFilePath + archiveFileName, LogLevel.Info);
-			try
+			//Don't archive file if not archive file path defined.
+			//This is to allow the UPS export to append to the file instead of creating a new file.
+			//As we are having issues with getting the export to properly create the export.
+			if (!string.IsNullOrWhiteSpace(fileImportExport.ArchiveFilePath))
 			{
-				File.Move(fileImportExport.ImportFilePath+fileImportExport.ImportFileName,fileImportExport.ArchiveFilePath + archiveFileName);
-			}
-			catch (Exception err)
-			{
-				
-				_utilities.WriteLog("Unable to move Import file to archive location.", LogLevel.Error,"",err);
-			}
+				FileInfo f = new FileInfo(fileImportExport.ImportFilePath + fileImportExport.ImportFileName);
 
+				string archiveFileName = f.Name.Replace(f.Extension, "") + DateTime.Now.ToString("_yyyyMMdd_HHmmss") + f.Extension;
+				_utilities.WriteLog("Archiving Import file to " + fileImportExport.ArchiveFilePath + archiveFileName, LogLevel.Info);
+				try
+				{
+					File.Move(fileImportExport.ImportFilePath + fileImportExport.ImportFileName,
+						fileImportExport.ArchiveFilePath + archiveFileName);
+				}
+				catch (Exception err)
+				{
 
+					_utilities.WriteLog("Unable to move Import file to archive location.", LogLevel.Error, "", err);
+				}
+
+			}
 			_utilities.WriteLog("Completed processing " + fileImportExport.DisplayName , LogLevel.Info);
 		}
 	}
